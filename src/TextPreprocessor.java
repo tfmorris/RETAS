@@ -103,6 +103,13 @@ public abstract class TextPreprocessor {
                 count++;
             }
         } catch (Exception e) {
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                }
+            }
         }
         return list;
     }
