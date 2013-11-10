@@ -19,13 +19,14 @@
  */
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class EditDistAligner {
 
     String[] reference;
     String[] candidate;
     int s1, e1, s2, e2;
-    ArrayList<AlignedSequence> alignment;
+    List<AlignedSequence> alignment;
     
     int[][] table;
     int[][] trace; 
@@ -47,7 +48,7 @@ public class EditDistAligner {
     }
      
     // aligns subsegments of the input sequences 
-    public ArrayList<AlignedSequence> align(String[] reference, String[] candidate, int s1, int e1, int s2, int e2) {
+    public List<AlignedSequence> align(String[] reference, String[] candidate, int s1, int e1, int s2, int e2) {
 
         this.reference = reference;
         this.candidate = candidate;
@@ -116,11 +117,11 @@ public class EditDistAligner {
         }
     }
 
-    private ArrayList<AlignedSequence> backtrace() {
+    private List<AlignedSequence> backtrace() {
              
         int i= e1-s1;
         int j= e2-s2;
-        ArrayList<Integer> ops = new ArrayList<Integer>();            
+        List<Integer> ops = new ArrayList<Integer>();            
         
         while ( (i >= 0) && (j >= 0) ) {
             ops.add(trace[i][j]);
@@ -135,7 +136,7 @@ public class EditDistAligner {
         }
         
         // recover the alignment
-        ArrayList<AlignedSequence> output = new ArrayList<AlignedSequence>();
+        List<AlignedSequence> output = new ArrayList<AlignedSequence>();
         String refElement;
         String candElement;
         int refIndex = s1;

@@ -13,28 +13,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.  
 */ 
-/*
-  RECURSIVE ALIGNMENT TOOL for OCR Evaluation
-  Version 1.0
- 
-  @author Ismet Zeki Yalniz
-  University of Massachusetts-Amherst
-  zeki@cs.umass.edu               
-  
-  About the code:
-  This is just a prototype. The code can be speeded up further in several ways as discussed below. 
-  1 - Currently String's equals() method is being called for comparing words and characters for the alignment. HashMap<String> is used for term indexing and finding the unique terms. Assigning an integer ID for each distinct term in the word sequence and using the resulting integers for finding unique words and aligning them might work faster.   
-  2 - The recursion is implemented in an iterative way with a stack represented by an ArrayList. Converting it to a LinkedList might improve the speed. 
-  3 - Character level alignment is performed by creating a String array of individual characters. Instead, the alignment can be performed directly at the level of characters for further speed.
-  4 - There are several constants MAX_SEGMENT_LENGTH, MAX_DYNAMIC_TABLE_SIZE and MAX_NUMBER_OF_CANDIDATE_ANCHORS. Using a different configuration may help improve the alignment speed. The default (recommended) values are given below in the code.
-  5 - The "edit distance" alignment code (params: insCost = delCost = 1, repCost = 2) uses the conventional dynamic programming algorithm. It uses O(n^2) space. One can implement an O(n) space version using a binary recursion, however, this would work two times slower. Therefore we use the original algorithm with a limit on the maximum size of the dynamic programming table (MAX_DYNAMIC_TABLE_SIZE). Using larger tables makes the computation take longer and can cause out-of-memory errors.
-  6 - MAX_SEGMENT_LENGTH specifies the base condition for recursion. If the text segments become shorter than this threshold, than the recursion is terminated and the alignment is carried out using a dynamic programming approach. Notice that MAX_DYNAMIC_TABLE_SIZE and MAX_SEGMENT_LENGTH are correlated.  
-  7 - MAX_NUMBER_OF_CANDIDATE_ANCHORS limits the total number of common unique words used for LCS alignment at the coarse level. The first MAX_NUMBER_OF_CANDIDATE_ANCHORS of them are used for splitting the text into shorter pieces. The last segment is therefore expected to be larger if the text is long and accomodates a larger number of unique words. This help improve the speed by avoiding the LCS computation for long sequences. Larger values may help produce more accurate alignments. Preliminary experiments on 1261 scanned book pairs suggest that the total number of matching chars/words is not significantly effected by varying this constant between 100 and 20000 (the change is less than 0.01%). But the speed improvement is drastical for long noisy texts.
-  8 - The TextPreprocessor merges hypenated words before the alignment. If this is not necessary, one could skip the text preprocessing step to improve the speed. The bottleneck is the I/O time. 
-  9 - Please see the comments in the code for other specifications. 
- 
-  GOOD LUCK! 
-*/
+
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -51,8 +30,70 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+/**
+ * RECURSIVE ALIGNMENT TOOL for OCR Evaluation Version 1.0
+ * 
+ * About the code: This is just a prototype. The code can be speeded up further
+ * in several ways as discussed below.
+ * <ol>
+ * <li>Currently String's equals() method is being called for comparing words
+ * and characters for the alignment. HashMap<String> is used for term indexing
+ * and finding the unique terms. Assigning an integer ID for each distinct term
+ * in the word sequence and using the resulting integers for finding unique
+ * words and aligning them might work faster.</li>
+ * 
+ * <li>The recursion is implemented in an iterative way with a stack represented
+ * by an ArrayList. Converting it to a LinkedList might improve the speed.
+ * 
+ * <li>Character level alignment is performed by creating a String array of
+ * individual characters. Instead, the alignment can be performed directly at
+ * the level of characters for further speed.
+ * 
+ * <li>There are several constants MAX_SEGMENT_LENGTH, MAX_DYNAMIC_TABLE_SIZE
+ * and MAX_NUMBER_OF_CANDIDATE_ANCHORS. Using a different configuration may help
+ * improve the alignment speed. The default (recommended) values are given below
+ * in the code.
+ * 
+ * <li>The "edit distance" alignment code (params: insCost = delCost = 1,
+ * repCost = 2) uses the conventional dynamic programming algorithm. It uses
+ * O(n^2) space. One can implement an O(n) space version using a binary
+ * recursion, however, this would work two times slower. Therefore we use the
+ * original algorithm with a limit on the maximum size of the dynamic
+ * programming table (MAX_DYNAMIC_TABLE_SIZE). Using larger tables makes the
+ * computation take longer and can cause out-of-memory errors.
+ * 
+ * <li>AX_SEGMENT_LENGTH specifies the base condition for recursion. If the text
+ * segments become shorter than this threshold, than the recursion is terminated
+ * and the alignment is carried out using a dynamic programming approach. Notice
+ * that MAX_DYNAMIC_TABLE_SIZE and MAX_SEGMENT_LENGTH are correlated.
+ * 
+ * <li>MAX_NUMBER_OF_CANDIDATE_ANCHORS limits the total number of common unique
+ * words used for LCS alignment at the coarse level. The first
+ * MAX_NUMBER_OF_CANDIDATE_ANCHORS of them are used for splitting the text into
+ * shorter pieces. The last segment is therefore expected to be larger if the
+ * text is long and accomodates a larger number of unique words. This help
+ * improve the speed by avoiding the LCS computation for long sequences. Larger
+ * values may help produce more accurate alignments. Preliminary experiments on
+ * 1261 scanned book pairs suggest that the total number of matching chars/words
+ * is not significantly effected by varying this constant between 100 and 20000
+ * (the change is less than 0.01%). But the speed improvement is drastical for
+ * long noisy texts.
+ * 
+ * <li>The TextPreprocessor merges hypenated words before the alignment. If this
+ * is not necessary, one could skip the text preprocessing step to improve the
+ * speed. The bottleneck is the I/O time.
+ * 
+ * <li>Please see the comments in the code for other specifications.
+ * </ol>
+ * GOOD LUCK!
+ * 
+ * @author Ismet Zeki Yalniz, University of Massachusetts-Amherst
+ *         zeki@cs.umass.edu
+ * @version 1.0
+ */
 public class RecursiveAlignmentTool {
   
     private static long MAX_SEGMENT_LENGTH = 400; // the maximum size for a text segment for the recursion. If the segment is shorter than this specified length (in terms of words) then the text is aligned directly using dynamic programming at the leaf level of the recursion. 
@@ -67,9 +108,9 @@ public class RecursiveAlignmentTool {
     
     TermIndexBuilder refIndex;
     TermIndexBuilder ocrIndex;
-    ArrayList<IndexEntry> anchorsRef;
-    ArrayList<IndexEntry> anchorsCand;
-    ArrayList<AlignedSequence> alignment;
+    List<IndexEntry> anchorsRef;
+    List<IndexEntry> anchorsCand;
+    List<AlignedSequence> alignment;
     
     String language = "";
     String groundTruthFile = "";
@@ -91,8 +132,8 @@ public class RecursiveAlignmentTool {
         // intersect unique words in the ground truth and ocr output
         anchorsRef = new ArrayList<IndexEntry>(MAX_NUMBER_OF_CANDIDATE_ANCHORS);
         anchorsCand = new ArrayList<IndexEntry>(MAX_NUMBER_OF_CANDIDATE_ANCHORS);
-        ArrayList<IndexEntry> newAnchorsRef = new ArrayList<IndexEntry>(MAX_NUMBER_OF_CANDIDATE_ANCHORS);
-        ArrayList<IndexEntry> newAnchorsCand = new ArrayList<IndexEntry>(MAX_NUMBER_OF_CANDIDATE_ANCHORS);
+        List<IndexEntry> newAnchorsRef = new ArrayList<IndexEntry>(MAX_NUMBER_OF_CANDIDATE_ANCHORS);
+        List<IndexEntry> newAnchorsCand = new ArrayList<IndexEntry>(MAX_NUMBER_OF_CANDIDATE_ANCHORS);
 
         int i = 0;
         int startRef, endRef, startCand, endCand;
@@ -162,8 +203,8 @@ public class RecursiveAlignmentTool {
             int lcsLength = LCSindices.length / 2;
 
             // use achors if and only if they are in the longest common subsequence
-            ArrayList<IndexEntry> newAnchorsRefRefined = new ArrayList<IndexEntry>();
-            ArrayList<IndexEntry> newAnchorsCandRefined = new ArrayList<IndexEntry>();
+            List<IndexEntry> newAnchorsRefRefined = new ArrayList<IndexEntry>();
+            List<IndexEntry> newAnchorsCandRefined = new ArrayList<IndexEntry>();
 
             for (int kk = 0; kk < lcsLength; kk++) {
                 IndexEntry refEntry = newAnchorsRef.get(LCSindices[kk]);
@@ -190,7 +231,7 @@ public class RecursiveAlignmentTool {
         } while ( i <= anchorsRef.size() );
     }
 
-    public ArrayList<AlignedSequence> align() {
+    public List<AlignedSequence> align() {
 
         if ( alignment == null){
             alignment = new ArrayList<AlignedSequence>(refIndex.getNumOfTokens() + ocrIndex.getNumOfTokens());
@@ -232,7 +273,7 @@ public class RecursiveAlignmentTool {
     private void charAlignSubsequences() {
         int EXPECTED_WORD_LENGTH_IN_CHARACTERS = 5; // for memory pre-allocation
         
-        ArrayList<AlignedSequence> alignment2 = new ArrayList<AlignedSequence>(alignment.size()*EXPECTED_WORD_LENGTH_IN_CHARACTERS);  
+        List<AlignedSequence> alignment2 = new ArrayList<AlignedSequence>(alignment.size()*EXPECTED_WORD_LENGTH_IN_CHARACTERS);  
         EditDistAligner aligner = new EditDistAligner();
         String candAccu[] = new String [(int)MAX_DYNAMIC_TABLE_SIZE]; 
         String refAccu[] = new String[(int)MAX_DYNAMIC_TABLE_SIZE];
@@ -276,7 +317,7 @@ public class RecursiveAlignmentTool {
                            if ( ((long) refAccuSize * (long)candAccuSize ) < MAX_DYNAMIC_TABLE_SIZE ){
                            
                                 // add it to the resulting sequence                               
-                                ArrayList<AlignedSequence> sq= aligner.align(refAccu, candAccu, 0, refAccuSize, 0 ,candAccuSize);
+                                List<AlignedSequence> sq= aligner.align(refAccu, candAccu, 0, refAccuSize, 0 ,candAccuSize);
                                 alignment2.addAll(sq);                               
                                 
                             }else  {
@@ -364,7 +405,7 @@ public class RecursiveAlignmentTool {
 
             if ( dynamicTableSize != 0 && dynamicTableSize <= MAX_DYNAMIC_TABLE_SIZE ) {
                 // run dynamic programming                
-                 ArrayList<AlignedSequence> sq= aligner.align(refTokens, candTokens, startRef, endRef, startCand, endCand);                
+                 List<AlignedSequence> sq= aligner.align(refTokens, candTokens, startRef, endRef, startCand, endCand);                
                  alignment.addAll(sq);   
                  
             } else {
@@ -423,19 +464,19 @@ public class RecursiveAlignmentTool {
 //    }
 
     public void findCommonUniqueWords(int refStart, int refEnd, int ocrStart, int ocrEnd,
-        ArrayList<IndexEntry> anchors1, ArrayList<IndexEntry> anchors2) {
+        List<IndexEntry> anchors1, List<IndexEntry> anchors2) {
 
         if (anchors1 == null || anchors2 == null) {
             System.out.println("findAnchorWordsSorted: arguments anchors1 or 2 can not be null");
         }
 
         // count words in designated segments
-        HashMap<String, IndexEntry> refVocab = refIndex.indexTerms(refStart, refEnd);
-        HashMap<String, IndexEntry> candVocab = ocrIndex.indexTerms(ocrStart, ocrEnd);
+        Map<String, IndexEntry> refVocab = refIndex.indexTerms(refStart, refEnd);
+        Map<String, IndexEntry> candVocab = ocrIndex.indexTerms(ocrStart, ocrEnd);
 
         // determine unique terms
-        HashMap<String, IndexEntry> refUniqueTerms = TermIndexBuilder.findUniqueTerms(refVocab);
-        HashMap<String, IndexEntry> candUniqueTerms = TermIndexBuilder.findUniqueTerms(candVocab);
+        Map<String, IndexEntry> refUniqueTerms = TermIndexBuilder.findUniqueTerms(refVocab);
+        Map<String, IndexEntry> candUniqueTerms = TermIndexBuilder.findUniqueTerms(candVocab);
 
         // find common unique words
         Collection<IndexEntry> col = refUniqueTerms.values(); 
@@ -831,9 +872,9 @@ public class RecursiveAlignmentTool {
      * @param candFile  input text 2: OCR output text (or the candidate text)
      * @param ignoredChars  The list of characters to be ignored
      * @param level alignment level: "c" or "w" (for character and word level alignment respectively)
-     * @return This method returns the alignment output in an ArrayList.
+     * @return This method returns the alignment output in an List.
      */
-    public static ArrayList<AlignedSequence> processSingleJob_getAlignedSequence(
+    public static List<AlignedSequence> processSingleJob_getAlignedSequence(
             String gtFile,  // input text 1: ground truth text
             String candFile,  // input text 2: OCR output text (or the candidate text)
             String ignoredChars, // The list of characters to be ignored
@@ -861,7 +902,7 @@ public class RecursiveAlignmentTool {
         
         // Initialize and run the recursive alignment tool for the word level alignment
         RecursiveAlignmentTool tool = new RecursiveAlignmentTool(gtFile, candFile, tp);
-        ArrayList<AlignedSequence> out = tool.align();
+        List<AlignedSequence> out = tool.align();
         
         return out;
     }
