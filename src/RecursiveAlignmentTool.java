@@ -43,6 +43,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.LineNumberReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.text.NumberFormat;
@@ -57,7 +58,7 @@ public class RecursiveAlignmentTool {
     private static long MAX_SEGMENT_LENGTH = 400; // the maximum size for a text segment for the recursion. If the segment is shorter than this specified length (in terms of words) then the text is aligned directly using dynamic programming at the leaf level of the recursion. 
     private static long MAX_DYNAMIC_TABLE_SIZE = 2000000; // run dynamic programming for aligning text segments if the dynamic programming table size is smaller than MAX_DYNAMIC_TABLE_SIZE. Otherwise align the sequences with nulls. 
     private static int MAX_NUMBER_OF_CANDIDATE_ANCHORS = 1000; // used for avoiding outofmemory errors for very large texts with large number of unique words.
-    private static final String WORD_BOUNDARY = "---";
+//    private static final String WORD_BOUNDARY = "---";
     
     // DEFAULT SETTINGS
     public static boolean WORD_LEVEL_ALIGNMENT = true;
@@ -380,46 +381,46 @@ public class RecursiveAlignmentTool {
         }
     }
 
-    private String[] copySegment(String[] tokens, int start, int end, boolean WORD_LEVEL) {
-
-        String[] out;
-        if (end > tokens.length) {
-            System.out.println("RecursiveAlignmentTool: check failed (end > tokens.length)");
-            end = tokens.length;           
-        }
-        if ( end < start ){
-            System.out.println("RecursiveAlignmentTool: check failed (end < start)");
-            end = start;
-        }
-       
-        if (WORD_LEVEL) {
-            out = new String[end - start];
-            for (int i = start, j = 0; i < end; i++, j++) {
-                out[j] = tokens[i];
-            }
-        } else {
-
-            int count = 0;
-            for (int i = start; i < end; i++) {
-                count += tokens[i].length();
-            }
-            count += (end - start); // allocate place for word boundaries
-
-            out = new String[count];
-            count = 0;
-            for (int i = start; i < end; i++) {
-                String cur = tokens[i];
-
-                for (int j = 0; j < cur.length(); j++) {
-                    out[count] = cur.substring(j, j + 1);
-                    count++;
-                }
-                out[count] = WORD_BOUNDARY;
-                count++;
-            }
-        }
-        return out;
-    }
+//    private String[] copySegment(String[] tokens, int start, int end, boolean WORD_LEVEL) {
+//
+//        String[] out;
+//        if (end > tokens.length) {
+//            System.out.println("RecursiveAlignmentTool: check failed (end > tokens.length)");
+//            end = tokens.length;           
+//        }
+//        if ( end < start ){
+//            System.out.println("RecursiveAlignmentTool: check failed (end < start)");
+//            end = start;
+//        }
+//       
+//        if (WORD_LEVEL) {
+//            out = new String[end - start];
+//            for (int i = start, j = 0; i < end; i++, j++) {
+//                out[j] = tokens[i];
+//            }
+//        } else {
+//
+//            int count = 0;
+//            for (int i = start; i < end; i++) {
+//                count += tokens[i].length();
+//            }
+//            count += (end - start); // allocate place for word boundaries
+//
+//            out = new String[count];
+//            count = 0;
+//            for (int i = start; i < end; i++) {
+//                String cur = tokens[i];
+//
+//                for (int j = 0; j < cur.length(); j++) {
+//                    out[count] = cur.substring(j, j + 1);
+//                    count++;
+//                }
+//                out[count] = WORD_BOUNDARY;
+//                count++;
+//            }
+//        }
+//        return out;
+//    }
 
     public void findCommonUniqueWords(int refStart, int refEnd, int ocrStart, int ocrEnd,
         ArrayList<IndexEntry> anchors1, ArrayList<IndexEntry> anchors2) {
@@ -661,15 +662,14 @@ public class RecursiveAlignmentTool {
         }
 
         // read arguments from the file
-        double accuracy = 0.0;
-        BufferedReader reader = new BufferedReader(new FileReader(new File(argFile)));
+//        double accuracy = 0.0;
+        BufferedReader reader = new LineNumberReader(new BufferedReader(new FileReader(new File(argFile))));
         String line = null;
         try {
             line = reader.readLine();
             line = line.trim();
             line = line.toLowerCase();
 
-            int lineNumber = 1;
             while (line != null) {
                 String[] tokens = line.split("=");
                 int numOfArgs = tokens.length;
@@ -692,8 +692,7 @@ public class RecursiveAlignmentTool {
                 }
 
                 line = reader.readLine();
-                lineNumber++;
-            }          
+             }          
         } catch (IOException ex) {
             System.out.println("Error: Can not read configuration file -> " + argFile);
             System.exit(0);
