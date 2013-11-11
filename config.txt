@@ -1,3 +1,3 @@
 level=CHAR
 alignmentFormat=LINES
-ignoredChars=1234567890,.'";:!?()[]{}<>`-+=/\$@%#|&^*_~
+ignoredChars=1234567890,.'";:!?()[]{}<>`-+=/\$@%#|&^*_~—–
