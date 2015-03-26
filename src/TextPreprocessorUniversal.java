@@ -41,7 +41,7 @@ public class TextPreprocessorUniversal extends TextPreprocessor{
         for (int i = 0; i < charAr.length; i++) {
             char ch = charAr[i];
 
-            // connect phonemes of words which are seperated by a dash
+            // connect syllables of words which are separated by a dash
             // -------------------------------------------------------------
             // MERGE HYPHENATED WORDS:
             if (ch == '-' && i < (charAr.length - 1)) {
