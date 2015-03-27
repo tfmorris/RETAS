@@ -1,4 +1,6 @@
-﻿Recursive Text Alignment Tool Copyright (C) 2013 by the University of Massachusetts at Amherst released under the GNU  GPL v3.0 (see license.txt)
+V1.1
+----
+Recursive Text Alignment Tool Copyright (C) 2013 by the University of Massachusetts at Amherst released under the GNU  GPL v3.0 (see license.txt)
 
 Written by I. Zeki Yalniz
 
@@ -96,3 +98,4 @@ Stats sts[] = RecursiveAlignmentTool.processSingleJob_getAlignmentStatsOnly(
 sts[0] contains the word level alignment statistics
 sts[1] contains the character level alignment statistics
 
+ 
