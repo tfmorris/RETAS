@@ -35,8 +35,13 @@ import java.util.Locale;
 
 public abstract class TextPreprocessor {
 
-    public Locale locale = null;
-    public static String IGNORED_CHARS = ".,;:=-+/'`&|$#@!%^*()[]_\"}{\\<>?~";
+    private Locale locale = new Locale("en","US");
+    String ignoredChars = ".,;:=-+/'`&|$#@!%^*()[]_\"}{\\<>?~";
+    
+    public TextPreprocessor(Locale locale, String ignoredChars) {
+        this.locale = locale;
+        this.ignoredChars = ignoredChars;
+    }
 
     public abstract String processText(String s);
 

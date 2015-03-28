@@ -58,20 +58,21 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 
 public class RecursiveAlignmentTool {
 
-    private static long MAX_SEGMENT_LENGTH = 400; // the maximum size for a text segment for the recursion. If the segment is shorter than this specified length (in terms of words) then the text is aligned directly using dynamic programming at the leaf level of the recursion. 
-    private static long MAX_DYNAMIC_TABLE_SIZE = 2000000; // run dynamic programming for aligning text segments if the dynamic programming table size is smaller than MAX_DYNAMIC_TABLE_SIZE. Otherwise align the sequences with nulls. 
-    private static int MAX_NUMBER_OF_CANDIDATE_ANCHORS = 1000; // used for avoiding outofmemory errors for very large texts with large number of unique words.
+    private final static long MAX_SEGMENT_LENGTH = 400; // the maximum size for a text segment for the recursion. If the segment is shorter than this specified length (in terms of words) then the text is aligned directly using dynamic programming at the leaf level of the recursion. 
+    private final static long MAX_DYNAMIC_TABLE_SIZE = 2000000; // run dynamic programming for aligning text segments if the dynamic programming table size is smaller than MAX_DYNAMIC_TABLE_SIZE. Otherwise align the sequences with nulls. 
+    private final static int MAX_NUMBER_OF_CANDIDATE_ANCHORS = 1000; // used for avoiding outofmemory errors for very large texts with large number of unique words.
 //    private static final String WORD_BOUNDARY = "---";
     
     // DEFAULT SETTINGS
-    public static boolean WORD_LEVEL_ALIGNMENT = true;
-    public static String OUTPUT_FORMAT = "COLS";
-    public static String numericCharSequence = "1234567890"; // if a unique word contains a numeric letter, it is not used as an anchor for dividing the text into pieces. Because page numbers are typically unique in the text. 
+    private boolean wordLevelAlignment = true;
+    enum FORMAT {COLS, LINES};
+    private FORMAT output_format = FORMAT.COLS;
     
     TermIndexBuilder refIndex;
     TermIndexBuilder ocrIndex;
@@ -84,8 +85,18 @@ public class RecursiveAlignmentTool {
     String ocrFile = "";
 
     public RecursiveAlignmentTool(String groundTruthFile, String ocrFile, TextPreprocessor tp) {
+        this(groundTruthFile, ocrFile, tp, true, FORMAT.COLS);
+    }
+
+    public RecursiveAlignmentTool(String groundTruthFile, String ocrFile, TextPreprocessor tp, Boolean wordLevelAlignment) {
+        this(groundTruthFile, ocrFile, tp, wordLevelAlignment, FORMAT.COLS);
+    }
+
+    public RecursiveAlignmentTool(String groundTruthFile, String ocrFile, TextPreprocessor tp, Boolean wordLevelAlignment, FORMAT output_format) {
         this.groundTruthFile = groundTruthFile;
         this.ocrFile = ocrFile;
+        this.wordLevelAlignment = wordLevelAlignment;
+        this.output_format = output_format;
 
         // create indices for these text files
         refIndex = new TermIndexBuilder(groundTruthFile, tp);
@@ -210,7 +221,7 @@ public class RecursiveAlignmentTool {
         wordAlignSubsequences();
         //checkWordLevelAlignment(); // for debugging purposes   
 
-        if (!WORD_LEVEL_ALIGNMENT) {
+        if (!wordLevelAlignment) {
             charAlignSubsequences();
             //checkCharLevelAlignment(); // for debugging purposes   
         }
@@ -323,7 +334,7 @@ public class RecursiveAlignmentTool {
 
     // STAGE 2: based on word level alignment, align all the characters
     // Michael Z    7/2013   Modified to avoid ArrayIndexOutOfBoundsException when there
-    // are long streteches without an anchor word. To avoid that, we only build the "accumulator"
+    // are long stretches without an anchor word. To avoid that, we only build the "accumulator"
     // array when we need it for the alignment and we're assured all the words will fit in the array.
     private void charAlignSubsequences() {
         int EXPECTED_WORD_LENGTH_IN_CHARACTERS = 5; // for memory pre-allocation
@@ -567,8 +578,17 @@ public class RecursiveAlignmentTool {
         Collections.sort(anchors2, comparator);
     }
 
-    public boolean isValidAnchor(String word) {
-
+    
+    /**
+     * If a unique word contains a numeric letter, it is not used as an anchor
+     * for dividing the text into pieces. Because page numbers are typically
+     * unique in the text.
+     * 
+     * @param word
+     * @return
+     */
+    private boolean isValidAnchor(String word) {
+        final String numericCharSequence = "1234567890";
         for (int i = 0; i < word.length(); i++) {
             if (numericCharSequence.indexOf(word.charAt(i)) != -1) {
                 return false;
@@ -626,11 +646,11 @@ public class RecursiveAlignmentTool {
         StringBuffer candBuffer = new StringBuffer(10000);
         StringBuffer refBuffer = new StringBuffer(10000);
 
-        boolean colFormat = OUTPUT_FORMAT.toLowerCase().startsWith("c");
-        // System.out.println(OUTPUT_FORMAT);
+        boolean colFormat = output_format == FORMAT.COLS;
+        // System.out.println(output_format);
 
         String NULL_STRING = "null";
-        if (WORD_LEVEL_ALIGNMENT) {
+        if (wordLevelAlignment) {
             lineWidth = 20;
             NULL_STRING = "null";
         } else {
@@ -677,7 +697,7 @@ public class RecursiveAlignmentTool {
                             counter = 0;
                             // kk--;
                         }
-                        if (!WORD_LEVEL_ALIGNMENT) {
+                        if (!wordLevelAlignment) {
                             candBuffer.append(candidate);
                             refBuffer.append(ref);
                         } else {
@@ -847,31 +867,25 @@ public class RecursiveAlignmentTool {
         }
 
         // select appropriate text preprocessor
-        TextPreprocessor tp;
         Stats stats;
-        tp = new TextPreprocessorUniversal(null); // if you want to use another locale, simply give it as a parameter to TextPreprocessorUniversal
-
-        if (ignoredChars != null) {
-            TextPreprocessor.IGNORED_CHARS = ignoredChars;
-        } else {
-            TextPreprocessor.IGNORED_CHARS = "";
+        if (ignoredChars == null) {
+            ignoredChars = "";
         }
+        TextPreprocessor tp = new TextPreprocessorUniversal(new Locale("en","US"), ignoredChars);
 
         // define the level of alignment
+        Boolean wordLevelAlignment = true;
         if (level != null && level.toLowerCase().startsWith("c")) {
-            RecursiveAlignmentTool.WORD_LEVEL_ALIGNMENT = false; // default value is true;
-        } else {
-            RecursiveAlignmentTool.WORD_LEVEL_ALIGNMENT = true;
+            wordLevelAlignment = false;
         }
 
+        FORMAT format = FORMAT.COLS;
         if (outFormat != null && outFormat.toLowerCase().startsWith("l")) {
-            RecursiveAlignmentTool.OUTPUT_FORMAT = "LINES";
-        } else {
-            RecursiveAlignmentTool.OUTPUT_FORMAT = "COLS";
+            format = FORMAT.LINES;
         }
 
         // initialize and run the recursive alignment tool
-        RecursiveAlignmentTool tool = new RecursiveAlignmentTool(gtFile, candFile, tp);
+        RecursiveAlignmentTool tool = new RecursiveAlignmentTool(gtFile, candFile, tp, wordLevelAlignment, format);
         tool.align();
 
         // output alignment results
@@ -914,19 +928,13 @@ public class RecursiveAlignmentTool {
 
         // select appropriate text preprocessor
         TextPreprocessor tp;
-        tp = new TextPreprocessorUniversal(null); // if you want to use another locale, simply give it as a parameter to TextPreprocessorUniversal
-
-        if (ignoredChars != null) {
-            TextPreprocessor.IGNORED_CHARS = ignoredChars;
-        } else {
-            TextPreprocessor.IGNORED_CHARS = "";
+        if (ignoredChars == null) {
+            ignoredChars = "";
         }
-
-        // Define the level of alignment
-        RecursiveAlignmentTool.WORD_LEVEL_ALIGNMENT = true;
+        tp = new TextPreprocessorUniversal(new Locale("en","US"), ignoredChars); // if you want to use another locale, simply give it as a parameter to TextPreprocessorUniversal
 
         // Initialize and run the recursive alignment tool for the word level alignment
-        RecursiveAlignmentTool tool = new RecursiveAlignmentTool(gtFile, candFile, tp);
+        RecursiveAlignmentTool tool = new RecursiveAlignmentTool(gtFile, candFile, tp, true);
         Stats[] sts = tool.estimateWordAndCharacterOCRaccuracies();
 
         //System.out.println(ft.format(stWordAlignment.getOCRAccuracy()) + "\t" + ft.format(stCharAlignment.getOCRAccuracy()));     
@@ -954,22 +962,18 @@ public class RecursiveAlignmentTool {
         }
 
         // select appropriate text preprocessor
-        TextPreprocessor tp;
-        tp = new TextPreprocessorUniversal(null); // if you want to use another locale, simply give it as a parameter to TextPreprocessorUniversal
-
-        TextPreprocessor.IGNORED_CHARS = "";
-        if (ignoredChars != null) {
-            TextPreprocessor.IGNORED_CHARS = ignoredChars;
+        if (ignoredChars == null) {
+            ignoredChars = "";
         }
-
+        TextPreprocessor tp = new TextPreprocessorUniversal(new Locale("en","US"), ignoredChars);
         // Define the level of alignment
-        RecursiveAlignmentTool.WORD_LEVEL_ALIGNMENT = true;
+        Boolean wordLevelAlignment = true;
         if (level != null && level.toLowerCase().startsWith("c")) {
-            RecursiveAlignmentTool.WORD_LEVEL_ALIGNMENT = false;
+            wordLevelAlignment = false;
         }
 
         // Initialize and run the recursive alignment tool for the word level alignment
-        RecursiveAlignmentTool tool = new RecursiveAlignmentTool(gtFile, candFile, tp);
+        RecursiveAlignmentTool tool = new RecursiveAlignmentTool(gtFile, candFile, tp, wordLevelAlignment);
         List<AlignedSequence> out = tool.align();
 
         return out;

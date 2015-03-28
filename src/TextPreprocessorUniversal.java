@@ -24,12 +24,12 @@ import java.util.Locale;
 
 public class TextPreprocessorUniversal extends TextPreprocessor {
 
-    public TextPreprocessorUniversal(Locale loc) {
-        if (loc == null) {
-            locale = new Locale("en", "US");
-        } else {
-            locale = loc;
-        }
+    public TextPreprocessorUniversal() {
+        this(new Locale("en", "US"),"");
+    }
+    
+    public TextPreprocessorUniversal(Locale locale, String ignoredChars) {
+        super(locale, ignoredChars);
     }
 
     public String processText(String s) {
@@ -63,7 +63,7 @@ public class TextPreprocessorUniversal extends TextPreprocessor {
             // TODO: it is possible to speed up the following code by hashing the list of ignored characters for O(1) time look-up. Current implementation has O(k) complexity where k is the total number of characters in the ingored char list. 
             // output the char
             //  if ( isValidChar(ch) ) {
-            if (IGNORED_CHARS.indexOf(ch) == -1) {
+            if (ignoredChars.indexOf(ch) == -1) {
                 output[backIndex] = ch;
                 backIndex++;
             }
@@ -84,7 +84,7 @@ public class TextPreprocessorUniversal extends TextPreprocessor {
     }
 
     public boolean isValidChar(char a) {
-        if (IGNORED_CHARS.indexOf(a) == -1) {
+        if (ignoredChars.indexOf(a) == -1) {
             return true;
         }
         return false;
