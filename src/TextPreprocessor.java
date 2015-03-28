@@ -76,10 +76,14 @@ public abstract class TextPreprocessor {
             input.close();
             output.close();
         } catch (Exception ex) {
+            ex.printStackTrace();
         } finally {
             try {
-                input.close();
+                if (input != null) {
+                    input.close();
+                }
             } catch (IOException ex) {
+                // ignore any exception on close
             }
         }
     }
@@ -205,7 +209,10 @@ public abstract class TextPreprocessor {
 
     public static String readFile(File file) {
 
-        if (file == null || !file.exists()) {
+        if (file == null) {
+            System.out.println("TextPreprocessor: Can not read null file");
+            return null;
+        } else if (!file.exists()) {
             System.out.println("TextPreprocessor: Can not read the file " + file.getAbsolutePath());
             return null;
         }
@@ -233,7 +240,11 @@ public abstract class TextPreprocessor {
             }
         }
         fr = null;
-        return bufc.toString();
+        if (bufc !=null) {
+            return bufc.toString();
+        } else {
+            return null;
+        }
     }
 
     public static class MyFileFilter implements FileFilter {

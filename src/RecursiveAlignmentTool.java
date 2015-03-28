@@ -535,6 +535,7 @@ public class RecursiveAlignmentTool {
 
         if (anchors1 == null || anchors2 == null) {
             System.out.println("findAnchorWordsSorted: arguments anchors1 or 2 can not be null");
+            return;
         }
 
         // count words in designated segments
@@ -720,7 +721,7 @@ public class RecursiveAlignmentTool {
             if (errorWriter != null) {
                 errorWriter.close();
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             System.out.println("Error. Can not write the file: " + outputfile);
         }
 

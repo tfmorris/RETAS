@@ -195,9 +195,11 @@ public class TermIndexBuilder {
             ex.printStackTrace();
         } finally {
             try {
-                writer.close();
+                if (writer != null) {
+                    writer.close();
+                }
             } catch (IOException ex) {
-                ex.printStackTrace();
+                // ignore exception in cleanup
             }
         }
     }
@@ -246,8 +248,11 @@ public class TermIndexBuilder {
         } catch (IOException ex) {
         } finally {
             try {
-                writer.close();
+                if (writer != null) {
+                    writer.close();
+                }
             } catch (IOException ex) {
+                // ignore exception on close
             }
         }
 
