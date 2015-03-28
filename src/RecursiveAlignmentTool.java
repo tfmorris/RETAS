@@ -67,7 +67,6 @@ public class RecursiveAlignmentTool {
     private final static long MAX_SEGMENT_LENGTH = 400; // the maximum size for a text segment for the recursion. If the segment is shorter than this specified length (in terms of words) then the text is aligned directly using dynamic programming at the leaf level of the recursion. 
     private final static long MAX_DYNAMIC_TABLE_SIZE = 2000000; // run dynamic programming for aligning text segments if the dynamic programming table size is smaller than MAX_DYNAMIC_TABLE_SIZE. Otherwise align the sequences with nulls. 
     private final static int MAX_NUMBER_OF_CANDIDATE_ANCHORS = 1000; // used for avoiding outofmemory errors for very large texts with large number of unique words.
-//    private static final String WORD_BOUNDARY = "---";
     
     // DEFAULT SETTINGS
     private boolean wordLevelAlignment = true;
@@ -80,7 +79,6 @@ public class RecursiveAlignmentTool {
     List<IndexEntry> anchorsCand;
     List<AlignedSequence> alignment;
     
-    String language = "";
     String groundTruthFile = "";
     String ocrFile = "";
 
@@ -230,6 +228,7 @@ public class RecursiveAlignmentTool {
     }
 
     // for debugging purposes
+    @SuppressWarnings("unused")
     private void checkWordLevelAlignment() {
         String[] refTokens = refIndex.getTokens();
         String[] candTokens = ocrIndex.getTokens();
@@ -262,6 +261,7 @@ public class RecursiveAlignmentTool {
     }
 
     // for debugging purposes
+    @SuppressWarnings("unused")
     private void checkCharLevelAlignment() {
 
         System.out.println("Checking character level alignment...");
@@ -348,7 +348,7 @@ public class RecursiveAlignmentTool {
         int refAccuSize = 0;
         int refStartAnchorIdx = -1;
         int candStartAnchorIdx = -1;
-        String ch;
+
 
         String cand, ref;
         for (int i = 0; i <= alignment.size(); i++) {
@@ -545,8 +545,7 @@ public class RecursiveAlignmentTool {
         List<IndexEntry> anchors1, List<IndexEntry> anchors2) {
 
         if (anchors1 == null || anchors2 == null) {
-            System.out.println("findAnchorWordsSorted: arguments anchors1 or 2 can not be null");
-            return;
+            throw new IllegalArgumentException("findAnchorWordsSorted: arguments anchors1 or 2 can not be null");
         }
 
         // count words in designated segments
@@ -604,8 +603,7 @@ public class RecursiveAlignmentTool {
     public Stats calculateOCRaccuracy() {
 
         if (alignment.isEmpty()) {
-            System.out.println("RecursiveAlignmentTool::calculateOCRaccuracy(): There are no words aligned. Aligner must be run prior to calling calculateOCRaccuracy");
-            return null;
+            throw new IllegalArgumentException("RecursiveAlignmentTool::calculateOCRaccuracy(): There are no words aligned. Aligner must be run prior to calling calculateOCRaccuracy");
         }
 
         // align each segments characters individually
