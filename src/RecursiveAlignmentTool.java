@@ -775,9 +775,6 @@ public class RecursiveAlignmentTool {
         String line = null;
         try {
             line = reader.readLine();
-            line = line.trim();
-            line = line.toLowerCase();
-
             while (line != null) {
                 String[] tokens = line.split("=");
                 int numOfArgs = tokens.length;
