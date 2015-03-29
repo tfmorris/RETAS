@@ -67,9 +67,14 @@ public class TermIndexBuilder {
         return ((double) mintotal / total);
     }
 
-    // including startIndex, excluding endIndex
+    /**
+     * @param startIndex inclusive
+     * @param endIndex non-inclusive
+     * @return
+     */
     public Map<String, IndexEntry> indexTerms(int startIndex, int endIndex) {
 
+        // FIXME: side effect - move to some place explicit
         index = new HashMap<String, IndexEntry>(endIndex - startIndex);
 
         for (int i = startIndex; i < endIndex; i++) {
@@ -90,14 +95,9 @@ public class TermIndexBuilder {
     public static Map<String, IndexEntry> findUniqueTerms(Map<String, IndexEntry> terms) {
         Map<String, IndexEntry> uniqueTerms = new HashMap<String, IndexEntry>();
 
-        Collection<IndexEntry> col = terms.values();
-        Iterator<IndexEntry> iter = col.iterator();
-
-        while (iter.hasNext()) {
-            IndexEntry ent = iter.next();
-
+        for (IndexEntry ent : terms.values()) {
             // enforce the term to be unique
-            // in order to avoid stop words put a size contraint on the length of words to be selected
+            // in order to avoid stop words put a size constraint on the length of words to be selected
             if (ent.getFrequency() == 1 && ent.getTerm().length() > 3) {
                 uniqueTerms.put(ent.getTerm(), ent);
             }
@@ -112,8 +112,7 @@ public class TermIndexBuilder {
     public static List<IndexEntry> countStopWords(Map<String, IndexEntry> terms, String[] stopwords) {
         List<IndexEntry> stopTerms = new ArrayList<IndexEntry>(stopwords.length);
 
-        for (int i = 0; i < stopwords.length; i++) {
-            String curWord = stopwords[i];
+        for (String curWord : stopwords) {
             IndexEntry ent = terms.get(curWord);
             if (ent != null) {
                 stopTerms.add(ent);
@@ -127,10 +126,7 @@ public class TermIndexBuilder {
     public static int[] countTermsBasedOnRank(Map<String, IndexEntry> ind, int MAX_RANK) {
         int result[] = new int[MAX_RANK + 1];
 
-        Collection<IndexEntry> col = ind.values();
-        Iterator<IndexEntry> it = col.iterator();
-        while (it.hasNext()) {
-            IndexEntry ent = it.next();
+        for (IndexEntry ent : ind.values()) {
             int fre = (int) ent.getFrequency();
             result[fre]++;
         }
@@ -141,10 +137,7 @@ public class TermIndexBuilder {
             int MAX_RANK) {
         int result[][] = new int[MAX_RANK + 1][3];
 
-        Collection<IndexEntry> col = ind.values();
-        Iterator<IndexEntry> it = col.iterator();
-        while (it.hasNext()) {
-            IndexEntry ent = it.next();
+        for (IndexEntry ent : ind.values()) {
             int fre = (int) ent.getFrequency();
             if (fre > MAX_RANK) {
                 continue;
@@ -159,10 +152,7 @@ public class TermIndexBuilder {
                 }
             }
         }
-        col = ind2.values();
-        it = col.iterator();
-        while (it.hasNext()) {
-            IndexEntry ent = it.next();
+        for (IndexEntry ent : ind2.values()) {
             int fre = (int) ent.getFrequency();
             if (fre > MAX_RANK) {
                 continue;
@@ -275,8 +265,8 @@ public class TermIndexBuilder {
                 index.put(s, new IndexEntry(s, 1, j, 1));
             }
         }
-        for (int i = 0; i < tokens.length; i++) {
-            IndexEntry e = index.get(tokens[i]);
+        for (String token : tokens) {
+            IndexEntry e = index.get(token);
             if (e.getFrequency() <= max_frequency) {
                 results.add(e);
             }
