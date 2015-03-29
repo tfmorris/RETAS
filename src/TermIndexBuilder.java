@@ -26,12 +26,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 public class TermIndexBuilder {
 
+    private static final int MIN_WORD_LENGTH = 3;
     String originalText = null;
     String[] tokens = null;
     Map<String, IndexEntry> index = null;
@@ -48,21 +48,18 @@ public class TermIndexBuilder {
         return originalText.length();
     }
 
-    public double intersect_vocabularies(Map<String, IndexEntry> h) {
-        Collection<IndexEntry> col = index.values();
-        Iterator<IndexEntry> iter = col.iterator();
+    public double intersect_vocabularies(Map<String, IndexEntry> otherIndex) {
         long total = 0;
         long mintotal = 0;
-        while (iter.hasNext()) {
-            IndexEntry ent = iter.next();
-            if (ent.getTerm().equals("")) {
-                continue;
+        for (IndexEntry entry : index.values()) {
+            if (!"".equals(entry.getTerm())) {
+                long frequency = entry.getFrequency();
+                IndexEntry result = otherIndex.get(entry.getTerm());
+                if (result != null) {
+                    mintotal += Math.min(frequency, result.getFrequency());
+                }
+                total += entry.getFrequency();
             }
-            IndexEntry result = h.get(ent.getTerm());
-            if (result != null) {
-                mintotal += Math.min(ent.getFrequency(), result.getFrequency());
-            }
-            total += ent.getFrequency();
         }
         return ((double) mintotal / total);
     }
@@ -74,31 +71,35 @@ public class TermIndexBuilder {
      */
     public Map<String, IndexEntry> indexTerms(int startIndex, int endIndex) {
 
-        // FIXME: side effect - move to some place explicit
         index = new HashMap<String, IndexEntry>(endIndex - startIndex);
 
         for (int i = startIndex; i < endIndex; i++) {
-            String s = tokens[i];
+            String token = tokens[i];
 
-            if (!s.equals("")) {
-                if (index.containsKey(s)) {
-                    IndexEntry e = index.get(s);
-                    e.incrementFre();
+            if (!"".equals(token)) {
+                IndexEntry entry = index.get(token);
+                if (entry != null) {
+                    entry.incrementFre();
                 } else {
-                    index.put(s, new IndexEntry(s, 1, i, 1));
+                    index.put(token, new IndexEntry(token, 1, i, 1));
                 }
             }
         }
         return index;
     }
 
+    public Map<String, IndexEntry> findUniqueTerms() {
+        return findUniqueTerms(index);
+    }
+
+    // TODO: There's really no reason for this to be static instead of an instance method
     public static Map<String, IndexEntry> findUniqueTerms(Map<String, IndexEntry> terms) {
         Map<String, IndexEntry> uniqueTerms = new HashMap<String, IndexEntry>();
 
         for (IndexEntry ent : terms.values()) {
             // enforce the term to be unique
             // in order to avoid stop words put a size constraint on the length of words to be selected
-            if (ent.getFrequency() == 1 && ent.getTerm().length() > 3) {
+            if (ent.getFrequency() == 1 && ent.getTerm().length() > MIN_WORD_LENGTH) {
                 uniqueTerms.put(ent.getTerm(), ent);
             }
         }
