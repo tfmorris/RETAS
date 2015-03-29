@@ -22,40 +22,20 @@ public class IndexEntry {
 
     private String term;
     private long fre;
-    private long pos;
+    private long pos; // position in the stream (we only need one since we only care about unique terms)
     private int numOfTokens;
 
-    public IndexEntry(String t, long f, long p, int n){
-        term = t;
-        fre = f;
-        pos = p;
-        numOfTokens = n;
-    }
-
-    public boolean setFrequency(long f){
-        if (f >= 0){
-            fre = f;
-            return true;
-        }
-        return false;
-
-    }
-    public boolean setPos(long p){
-        if (p >= 0){
-            pos = p;
-            return true;
-        }
-        return false;
-   }
-    public boolean setNumOfTokens(int n){
-       //if (n >= 0){
-            numOfTokens = n;
-            return true;
-       //}
-       //return false;
-    }
-    public void setTerm(String t){
-        term = t;
+    /**
+     * @param token word/string for this entry
+     * @param frequency number of times the word occurs
+     * @param position position of first word
+     * @param count ??
+     */
+    public IndexEntry(String token, long frequency, long position, int count){
+        term = token;
+        fre = frequency;
+        pos = position;
+        numOfTokens = count; // TODO: this is always 1 - do we need it?
     }
 
     public long getFrequency(){
@@ -76,6 +56,11 @@ public class IndexEntry {
     }
     public void incrementFre(){
         fre++;
+    }
+    
+    @Override
+    public String toString() {
+        return term + ":" + pos + ":" + fre;
     }
 
 }
