@@ -71,14 +71,9 @@ public class RecursiveAlignmentTool {
     // DEFAULT SETTINGS
     private boolean wordLevelAlignment = true;
     enum FORMAT {COLS, LINES};
-    private FORMAT output_format = FORMAT.COLS;
+    private FORMAT outputFormat = FORMAT.COLS;
     
-    TermIndexBuilder refIndex;
-    TermIndexBuilder ocrIndex;
-    List<IndexEntry> anchorsRef;
-    List<IndexEntry> anchorsCand;
-    List<AlignedSequence> alignment;
-    
+    private TextPreprocessor textPreprocessor;
     String groundTruthFile = "";
     String ocrFile = "";
 
@@ -90,23 +85,20 @@ public class RecursiveAlignmentTool {
         this(groundTruthFile, ocrFile, tp, wordLevelAlignment, FORMAT.COLS);
     }
 
-    public RecursiveAlignmentTool(String groundTruthFile, String ocrFile, TextPreprocessor tp, Boolean wordLevelAlignment, FORMAT output_format) {
+    public RecursiveAlignmentTool(String groundTruthFile, String ocrFile, TextPreprocessor tp, Boolean wordLevelAlignment, FORMAT outputFormat) {
         this.groundTruthFile = groundTruthFile;
         this.ocrFile = ocrFile;
         this.wordLevelAlignment = wordLevelAlignment;
-        this.output_format = output_format;
-
-        // create indices for these text files
-        refIndex = new TermIndexBuilder(groundTruthFile, tp);
-        ocrIndex = new TermIndexBuilder(ocrFile, tp);
+        this.outputFormat = outputFormat;
+        this.textPreprocessor = tp;
     }
 
     // TODO: use linked list in place of arraylist. It may get faster.
-    private void findAnchorWords() {
+    private List<List<IndexEntry>> findAnchorWords(TermIndexBuilder refIndex, TermIndexBuilder candIndex) {
 
         // intersect unique words in the ground truth and ocr output
-        anchorsRef = new ArrayList<IndexEntry>(MAX_NUMBER_OF_CANDIDATE_ANCHORS);
-        anchorsCand = new ArrayList<IndexEntry>(MAX_NUMBER_OF_CANDIDATE_ANCHORS);
+        List<IndexEntry> anchorsRef = new ArrayList<IndexEntry>(MAX_NUMBER_OF_CANDIDATE_ANCHORS);
+        List<IndexEntry> anchorsCand = new ArrayList<IndexEntry>(MAX_NUMBER_OF_CANDIDATE_ANCHORS);
         List<IndexEntry> newAnchorsRef = new ArrayList<IndexEntry>(MAX_NUMBER_OF_CANDIDATE_ANCHORS);
         List<IndexEntry> newAnchorsCand = new ArrayList<IndexEntry>(MAX_NUMBER_OF_CANDIDATE_ANCHORS);
 
@@ -119,7 +111,7 @@ public class RecursiveAlignmentTool {
                 startRef = 0;
                 endRef = refIndex.getNumOfTokens();
                 startCand = 0;
-                endCand = ocrIndex.getNumOfTokens();
+                endCand = candIndex.getNumOfTokens();
                 i--; // not to skip the first subsegment in the list
                 start = false;
             } else {
@@ -141,7 +133,7 @@ public class RecursiveAlignmentTool {
                     startRef = anchorsRef.get(i - 1).getPosInt() + 1;
                     endRef = refIndex.getNumOfTokens();
                     startCand = anchorsCand.get(i - 1).getPosInt() + 1;
-                    endCand = ocrIndex.getNumOfTokens();
+                    endCand = candIndex.getNumOfTokens();
                 } else { // inbetween segments
                     startRef = anchorsRef.get(i - 1).getPosInt() + 1;
                     endRef = anchorsRef.get(i).getPosInt();
@@ -152,10 +144,11 @@ public class RecursiveAlignmentTool {
 
             // if one of the segments is still large, go on recursive operations.
             if (((long) (endRef - startRef)) > MAX_SEGMENT_LENGTH || ((long) (endCand - startCand)) > MAX_SEGMENT_LENGTH) {
-                newAnchorsRef.clear();
-                newAnchorsCand.clear();
-                findCommonUniqueWords(startRef, endRef, startCand, endCand, newAnchorsRef, newAnchorsCand);
 
+                List<List<IndexEntry>> newAnchors = findCommonUniqueWords(refIndex, startRef, endRef, candIndex, startCand, endCand);
+                newAnchorsRef = newAnchors.get(0);
+                newAnchorsCand = newAnchors.get(1);
+                
                 // if there are no common unique words, then do not try to chop it down
                 if (newAnchorsRef.isEmpty()) {
                     if (i < anchorsRef.size()) {
@@ -177,9 +170,9 @@ public class RecursiveAlignmentTool {
             int LCSindices[] = LCS.findLCS(newAnchorsRef, newAnchorsCand);
             int lcsLength = LCSindices.length / 2;
 
-            // use achors if and only if they are in the longest common subsequence
-            List<IndexEntry> newAnchorsRefRefined = new ArrayList<IndexEntry>();
-            List<IndexEntry> newAnchorsCandRefined = new ArrayList<IndexEntry>();
+            // use anchors if and only if they are in the longest common subsequence
+            List<IndexEntry> newAnchorsRefRefined = new ArrayList<IndexEntry>(newAnchorsRef.size() * 3 / 4); // allocated at 75%
+            List<IndexEntry> newAnchorsCandRefined = new ArrayList<IndexEntry>(newAnchorsCand.size() * 3 / 4);
 
             for (int kk = 0; kk < lcsLength; kk++) {
                 IndexEntry refEntry = newAnchorsRef.get(LCSindices[kk]);
@@ -204,24 +197,31 @@ public class RecursiveAlignmentTool {
             i++;
             // break; // test - stop recursion at the first stage
         } while (i <= anchorsRef.size());
+        return packResults(anchorsRef, anchorsCand);
+    }
+
+    private List<List<IndexEntry>> packResults(List<IndexEntry> anchorsRef,
+            List<IndexEntry> anchorsCand) {
+        List<List<IndexEntry>> result = new ArrayList<List<IndexEntry>>();
+        result.add(anchorsRef);
+        result.add(anchorsCand);
+        return result;
     }
 
     public List<AlignedSequence> align() {
 
-        if (alignment == null) {
-            alignment = new ArrayList<AlignedSequence>(refIndex.getNumOfTokens() + ocrIndex.getNumOfTokens());
-        } else {
-            alignment.clear();
-        }
+        // create word/token indices for these text files
+        TermIndexBuilder refIndex = new TermIndexBuilder(groundTruthFile, textPreprocessor);
+        TermIndexBuilder ocrIndex = new TermIndexBuilder(ocrFile, textPreprocessor);
 
-        findAnchorWords();
+        List<List<IndexEntry>> anchors = findAnchorWords(refIndex, ocrIndex);
 
-        wordAlignSubsequences();
-        //checkWordLevelAlignment(); // for debugging purposes   
+        List<AlignedSequence> alignment = wordAlignSubsequences(refIndex, ocrIndex, anchors);
+//        checkWordLevelAlignment(refIndex, ocrIndex, alignment); // for debugging purposes   
 
         if (!wordLevelAlignment) {
-            charAlignSubsequences();
-            //checkCharLevelAlignment(); // for debugging purposes   
+            alignment = charAlignSubsequences(alignment);
+//            checkCharLevelAlignment(refIndex, ocrIndex, alignment); // for debugging purposes   
         }
 
         return alignment;
@@ -229,9 +229,9 @@ public class RecursiveAlignmentTool {
 
     // for debugging purposes
     @SuppressWarnings("unused")
-    private void checkWordLevelAlignment() {
+    private void checkWordLevelAlignment(TermIndexBuilder refIndex, TermIndexBuilder candIndex, List<AlignedSequence> alignment) {
         String[] refTokens = refIndex.getTokens();
-        String[] candTokens = ocrIndex.getTokens();
+        String[] candTokens = candIndex.getTokens();
         int curIndexRef = 0;
         int curIndexCand = 0;
 
@@ -262,7 +262,7 @@ public class RecursiveAlignmentTool {
 
     // for debugging purposes
     @SuppressWarnings("unused")
-    private void checkCharLevelAlignment() {
+    private void checkCharLevelAlignment(TermIndexBuilder refIndex, TermIndexBuilder candIndex, List<AlignedSequence> alignment) {
 
         System.out.println("Checking character level alignment...");
         // strip out all the spaces from the original text. During the character level alignment, each
@@ -279,7 +279,7 @@ public class RecursiveAlignmentTool {
         // character level alignment uses as input, it's safe to ignore spaces. 
 
         final String refText = refIndex.originalText.replaceAll("\\s+", "");
-        final String candText = ocrIndex.originalText.replaceAll("\\s+", "");
+        final String candText = candIndex.originalText.replaceAll("\\s+", "");
         int curIndexRef = 0;
         int curIndexCand = 0;
 
@@ -315,19 +315,18 @@ public class RecursiveAlignmentTool {
 
     public Stats[] estimateWordAndCharacterOCRaccuracies() {
 
-        if (alignment == null) {
-            alignment = new ArrayList<AlignedSequence>(refIndex.getNumOfTokens() + ocrIndex.getNumOfTokens());
-        } else {
-            alignment.clear();
-        }
         Stats[] sts = new Stats[2];
+        
+        // create word/token indices
+        TermIndexBuilder refIndex = new TermIndexBuilder(groundTruthFile, textPreprocessor);
+        TermIndexBuilder ocrIndex = new TermIndexBuilder(ocrFile, textPreprocessor);
 
-        findAnchorWords();
-        wordAlignSubsequences();
-        sts[0] = this.calculateOCRaccuracy();
+        List<List<IndexEntry>> anchors = findAnchorWords(refIndex, ocrIndex);
+        List<AlignedSequence> alignment = wordAlignSubsequences(refIndex, ocrIndex, anchors);
+        sts[0] = this.calculateOCRaccuracy(alignment);
 
-        charAlignSubsequences();
-        sts[1] = this.calculateOCRaccuracy();
+        List<AlignedSequence> alignment2 = charAlignSubsequences(alignment);
+        sts[1] = this.calculateOCRaccuracy(alignment2);
 
         return sts;
     }
@@ -336,7 +335,7 @@ public class RecursiveAlignmentTool {
     // Michael Z    7/2013   Modified to avoid ArrayIndexOutOfBoundsException when there
     // are long stretches without an anchor word. To avoid that, we only build the "accumulator"
     // array when we need it for the alignment and we're assured all the words will fit in the array.
-    private void charAlignSubsequences() {
+    private List<AlignedSequence> charAlignSubsequences(List<AlignedSequence> alignment) {
         int EXPECTED_WORD_LENGTH_IN_CHARACTERS = 5; // for memory pre-allocation
 
         List<AlignedSequence> alignment2 = new ArrayList<AlignedSequence>(alignment.size() * EXPECTED_WORD_LENGTH_IN_CHARACTERS);
@@ -353,7 +352,7 @@ public class RecursiveAlignmentTool {
         String cand, ref;
         for (int i = 0; i <= alignment.size(); i++) {
 
-            if (alignment.size() == i) { // dont forget the last text segment
+            if (alignment.size() == i) { // don't forget the last text segment
                 cand = "";
                 ref = "";
             } else {
@@ -455,14 +454,21 @@ public class RecursiveAlignmentTool {
         // a sanity check such as checkCharLevelAlignment() will fail. 
         alignment2.remove(alignment2.size() - 1);
         alignment2.remove(alignment2.size() - 1);
-        alignment = alignment2;
+        return alignment2;
     }
 
     // STAGE 1 : apply word level alignment for each segment
-    private void wordAlignSubsequences() {
+    private List<AlignedSequence> wordAlignSubsequences(TermIndexBuilder refIndex,
+            TermIndexBuilder candIndex, List<List<IndexEntry>> anchors) {
+
+        List<IndexEntry> anchorsRef = anchors.get(0);
+        List<IndexEntry> anchorsCand = anchors.get(1);
+        
+        List<AlignedSequence> alignment = new ArrayList<AlignedSequence>(
+                refIndex.getNumOfTokens() + candIndex.getNumOfTokens());
 
         String[] refTokens = refIndex.getTokens();
-        String[] candTokens = ocrIndex.getTokens();
+        String[] candTokens = candIndex.getTokens();
         EditDistAligner aligner = new EditDistAligner();
 
         int startRef = 0, endRef = 0, startCand = 0, endCand = 0;
@@ -473,7 +479,7 @@ public class RecursiveAlignmentTool {
             // copy segment
             if (j == anchorsRef.size()) {
                 endRef = refIndex.getNumOfTokens();
-                endCand = ocrIndex.getNumOfTokens();
+                endCand = candIndex.getNumOfTokens();
             } else {
                 endRef = anchorsRef.get(j).getPosInt();
                 endCand = anchorsCand.get(j).getPosInt();
@@ -498,6 +504,7 @@ public class RecursiveAlignmentTool {
             startRef = endRef;
             startCand = endCand;
         }
+        return alignment;
     }
 
 //   private String[] copySegment(String[] tokens, int start, int end, boolean WORD_LEVEL) {
@@ -541,20 +548,30 @@ public class RecursiveAlignmentTool {
 //        return out;
 //    }
 
-    public void findCommonUniqueWords(int refStart, int refEnd, int ocrStart, int ocrEnd,
-        List<IndexEntry> anchors1, List<IndexEntry> anchors2) {
+    /**
+     * @param refIndex
+     * @param refStart
+     * @param refEnd
+     * @param ocrIndex
+     * @param ocrStart
+     * @param ocrEnd
+     * @param anchors1 Empty list to receive output of anchors for reference tokens, sorted by position in reference stream
+     * @param anchors2 Empty list to receive output of anchors for candidate tokens, sorted by position in candidate stream
+     * @return 
+     */
+    public List<List<IndexEntry>> findCommonUniqueWords(TermIndexBuilder refIndex, int refStart,
+            int refEnd, TermIndexBuilder ocrIndex, int ocrStart, int ocrEnd) {
 
-        if (anchors1 == null || anchors2 == null) {
-            throw new IllegalArgumentException("findAnchorWordsSorted: arguments anchors1 or 2 can not be null");
-        }
+        List<IndexEntry> anchors1 = new ArrayList<IndexEntry>();
+        List<IndexEntry> anchors2 = new ArrayList<IndexEntry>();
 
         // count words in designated segments
-        Map<String, IndexEntry> refVocab = refIndex.indexTerms(refStart, refEnd);
-        Map<String, IndexEntry> candVocab = ocrIndex.indexTerms(ocrStart, ocrEnd);
+        refIndex.indexTerms(refStart, refEnd);
+        ocrIndex.indexTerms(ocrStart, ocrEnd);
 
         // determine unique terms
-        Map<String, IndexEntry> refUniqueTerms = TermIndexBuilder.findUniqueTerms(refVocab);
-        Map<String, IndexEntry> candUniqueTerms = TermIndexBuilder.findUniqueTerms(candVocab);
+        Map<String, IndexEntry> refUniqueTerms = refIndex.findUniqueTerms();
+        Map<String, IndexEntry> candUniqueTerms = ocrIndex.findUniqueTerms();
 
         // find common unique words
         Collection<IndexEntry> col = refUniqueTerms.values();
@@ -575,6 +592,7 @@ public class RecursiveAlignmentTool {
         Comparator<IndexEntry> comparator = new TermPosComparator();
         Collections.sort(anchors1, comparator);
         Collections.sort(anchors2, comparator);
+        return packResults(anchors1, anchors2);
     }
 
     
@@ -600,7 +618,7 @@ public class RecursiveAlignmentTool {
     //                    OUTPUT FUNCTIONS
     // ************************************************************************* //
     // This method is equivalent to calling "outputAlignmentResults (null, null)" , but faster;
-    public Stats calculateOCRaccuracy() {
+    public Stats calculateOCRaccuracy(List<AlignedSequence> alignment) {
 
         if (alignment.isEmpty()) {
             throw new IllegalArgumentException("RecursiveAlignmentTool::calculateOCRaccuracy(): There are no words aligned. Aligner must be run prior to calling calculateOCRaccuracy");
@@ -634,7 +652,7 @@ public class RecursiveAlignmentTool {
 
     // Alignment results are written to outputfile
     // if both arguments are null, then this method simply calculates OCR accuracy and outputs nothing.
-    public Stats outputAlignmentResults(String outputfile, String errorsFilename) {
+    public Stats outputAlignmentResults(List<AlignedSequence> alignment, String outputfile, String errorsFilename) {
 
         long numError = 0;
         long total = 0;
@@ -644,7 +662,7 @@ public class RecursiveAlignmentTool {
         StringBuffer candBuffer = new StringBuffer(10000);
         StringBuffer refBuffer = new StringBuffer(10000);
 
-        boolean colFormat = output_format == FORMAT.COLS;
+        boolean colFormat = outputFormat == FORMAT.COLS;
         // System.out.println(output_format);
 
         String NULL_STRING = "null";
@@ -748,6 +766,13 @@ public class RecursiveAlignmentTool {
         //     System.out.println("OCR accuracy: " + wordAccuracy + " (matching words= " + (total - numError) + " reference length= " + total + ")");
     }
 
+    /**
+     * Main entry point for command line program
+     * 
+     * @param args
+     * @throws FileNotFoundException
+     * @throws IOException
+     */
     public static void main(String[] args) throws FileNotFoundException, IOException {
 
         // System.out.println(".,;:=-+/'`&|$#@!%^*()[]_\"}{\\<>?~");
@@ -884,14 +909,14 @@ public class RecursiveAlignmentTool {
 
         // initialize and run the recursive alignment tool
         RecursiveAlignmentTool tool = new RecursiveAlignmentTool(gtFile, candFile, tp, wordLevelAlignment, format);
-        tool.align();
+        List<AlignedSequence> alignment = tool.align();
 
         // output alignment results
         if (alignFile != null) {
-            stats = tool.outputAlignmentResults(alignFile, null);
+            stats = tool.outputAlignmentResults(alignment, alignFile, null);
         } else {
             // if OCR accuracy is the only concern, then this method is faster
-            stats = tool.calculateOCRaccuracy();
+            stats = tool.calculateOCRaccuracy(alignment);
         }
 
         // System.out.println(OCRaccuracy);
