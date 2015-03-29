@@ -26,6 +26,8 @@ public class TextPreprocessorUniversal extends TextPreprocessor {
 
     public TextPreprocessorUniversal() {
         this(new Locale("en", "US"),"");
+        // TODO: Default locale instead of alway en-US?
+//        this(Locale.getDefault(),"");
     }
     
     public TextPreprocessorUniversal(Locale locale, String ignoredChars) {
@@ -34,6 +36,7 @@ public class TextPreprocessorUniversal extends TextPreprocessor {
 
     public String processText(String s) {
 
+        // TODO: Use s.charAt() instead to save copy costs
         char[] charAr = s.toCharArray();
         char[] output = new char[charAr.length + 1];
         int backIndex = 0;
