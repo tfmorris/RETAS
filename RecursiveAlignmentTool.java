@@ -56,7 +56,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -216,6 +215,7 @@ public class RecursiveAlignmentTool {
     }
 
     // for debugging purposes
+    @SuppressWarnings("unused")
     private void checkWordLevelAlignment() {
         final String[] refTokens = refIndex.getTokens();
         final String[] candTokens = ocrIndex.getTokens();
@@ -248,6 +248,7 @@ public class RecursiveAlignmentTool {
     }
 
     // for debugging purposes
+    @SuppressWarnings("unused")
     private void checkCharLevelAlignment() {
 
         System.out.println("Checking character level alignment...");
@@ -774,7 +775,6 @@ public class RecursiveAlignmentTool {
             line = line.trim();
             line = line.toLowerCase();
 
-            int lineNumber = 1;
             while (line != null) {
                 final String[] tokens = line.split("=");
                 final int numOfArgs = tokens.length;
@@ -795,7 +795,6 @@ public class RecursiveAlignmentTool {
                 }
 
                 line = reader.readLine();
-                lineNumber++;
             }
         } catch (final IOException ex) {
             System.out.println("Error: Can not read configuration file -> " + argFile);
