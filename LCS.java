@@ -12,7 +12,7 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/ 
+*/
 /**
  *
  * @author Ismet Zeki Yalniz
@@ -48,7 +48,7 @@ public class LCS {
 
         int LCSindices [] = new int[2 * opt[0][0]] ;
 
-        // recover LCS itself and print it 
+        // recover LCS itself and print it
         int i = 0, j = 0, count = 0;
         while(i < M && j < N) {
 
@@ -71,8 +71,8 @@ public class LCS {
     }
 
     // Space efficient version using binary recursion but it only reports the LCS length.
-    // This function is not called by the recursive alignment tool. 
-    // This is just to show how binary recursion is implemented. 
+    // This function is not called by the recursive alignment tool.
+    // This is just to show how binary recursion is implemented.
     public static int findLCS_3(ArrayList<IndexEntry> t1, ArrayList<IndexEntry> t2){
 
         int M = t1.size();

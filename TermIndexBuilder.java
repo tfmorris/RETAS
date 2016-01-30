@@ -41,7 +41,7 @@ public class TermIndexBuilder {
         originalText = tp.processText(originalText);
         tokens = originalText.split("\\s+");
     }
-    
+
 
     public int getOriginalTextLength() {
         return originalText.length();

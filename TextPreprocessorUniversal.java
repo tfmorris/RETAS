@@ -60,7 +60,7 @@ public class TextPreprocessorUniversal extends TextPreprocessor {
                 //i = j-1;
             }
 
-            // TODO: it is possible to speed up the following code by hashing the list of ignored characters for O(1) time look-up. Current implementation has O(k) complexity where k is the total number of characters in the ingored char list. 
+            // TODO: it is possible to speed up the following code by hashing the list of ignored characters for O(1) time look-up. Current implementation has O(k) complexity where k is the total number of characters in the ingored char list.
             // output the char
             //  if ( isValidChar(ch) ) {
             if (IGNORED_CHARS.indexOf(ch) == -1) {
