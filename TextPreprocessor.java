@@ -134,11 +134,11 @@ public abstract class TextPreprocessor {
 
         if (folderfile.isDirectory()) {
             files = folderfile.listFiles();
-            for (int i = 0; i < files.length; i++) {
-                if (files[i].isDirectory()) {
-                    result.addAll(getFilenamesRecursive(files[i].getAbsolutePath()));
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    result.addAll(getFilenamesRecursive(file.getAbsolutePath()));
                 } else {
-                    String filename = files[i].getAbsolutePath();
+                    String filename = file.getAbsolutePath();
                     if (filename.substring(filename.lastIndexOf('.') + 1).equalsIgnoreCase("unique")) {
                         result.add(filename);
                     }
@@ -238,11 +238,7 @@ public abstract class TextPreprocessor {
         }
 
         public boolean accept(File file) {
-            if (file.getName().toLowerCase().contains(contains)) {
-                return true;
-            }
-
-            return false;
+            return file.getName().toLowerCase().contains(contains);
         }
     }
 }
