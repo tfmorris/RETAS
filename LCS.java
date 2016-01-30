@@ -18,17 +18,17 @@
  * @author Ismet Zeki Yalniz
  */
 
-import java.util.ArrayList;
+import java.util.List;
 
 public class LCS {
 
     // precondition: anchor words in t1 and t2 are sorted based on their term positions in respective texts.
     // returns indices of elements in both sequences (in a 2D matrix) that are in the longest common subsequence
-    public static int[] findLCS(ArrayList<IndexEntry> t1, ArrayList<IndexEntry> t2){
+    public static int[] findLCS(List<IndexEntry> t1, List<IndexEntry> t2){
 
         int M = t1.size();
         int N = t2.size();
-        //ArrayList<IndexEntry> LCSterms = new ArrayList<IndexEntry>();
+        //List<IndexEntry> LCSterms = new ArrayList<IndexEntry>();
 
         // opt[i][j] = length of LCS of x[i..M] and y[j..N]
         int[][] opt = new int[M+1][N+1];
@@ -73,11 +73,11 @@ public class LCS {
     // Space efficient version using binary recursion but it only reports the LCS length.
     // This function is not called by the recursive alignment tool.
     // This is just to show how binary recursion is implemented.
-    public static int findLCS_3(ArrayList<IndexEntry> t1, ArrayList<IndexEntry> t2){
+    public static int findLCS_3(List<IndexEntry> t1, List<IndexEntry> t2){
 
         int M = t1.size();
         int N = t2.size();
-        //ArrayList<IndexEntry> LCSterms = new ArrayList<IndexEntry>();
+        //List<IndexEntry> LCSterms = new ArrayList<IndexEntry>();
 
         int X[] = new int[N+1];
         int Y[] = new int[N+1];
@@ -99,3 +99,4 @@ public class LCS {
 
     }
 }
+

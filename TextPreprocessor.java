@@ -30,6 +30,7 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 public abstract class TextPreprocessor {
@@ -83,10 +84,10 @@ public abstract class TextPreprocessor {
         }
     }
 
-    public static ArrayList<String> readFilenames(String inputfilename, int from, int to) {
+    public static List<String> readFilenames(String inputfilename, int from, int to) {
 
         BufferedReader reader = null;
-        ArrayList<String> list = new ArrayList<String>(1000);
+        List<String> list = new ArrayList<String>(1000);
         String line = "";
 
         try {
@@ -125,8 +126,8 @@ public abstract class TextPreprocessor {
         return result;
     }
 
-    public static ArrayList<String> getFilenamesRecursive(String rootFolder) {
-        ArrayList<String> result = new ArrayList<String>(10000);
+    public static List<String> getFilenamesRecursive(String rootFolder) {
+        List<String> result = new ArrayList<String>(100);
         File[] files = null;
         // MyFileFilter filter = new MyFileFilter(contains);
         File folderfile = new File(rootFolder);

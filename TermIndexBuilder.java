@@ -27,12 +27,14 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 public class TermIndexBuilder {
 
     String originalText = null;
     String[] tokens = null;
-    HashMap<String, IndexEntry> index = null;
+    Map<String, IndexEntry> index = null;
     TextPreprocessor tp = null;
 
     public TermIndexBuilder(String filename, TextPreprocessor tp) {
@@ -47,7 +49,7 @@ public class TermIndexBuilder {
         return originalText.length();
     }
 
-    public double intersect_vocabularies(HashMap<String, IndexEntry> h) {
+    public double intersect_vocabularies(Map<String, IndexEntry> h) {
         Collection<IndexEntry> col = index.values();
         Iterator<IndexEntry> iter = col.iterator();
         long total = 0;
@@ -67,7 +69,7 @@ public class TermIndexBuilder {
     }
 
     // including startIndex, excluding endIndex
-    public HashMap<String, IndexEntry> indexTerms(int startIndex, int endIndex) {
+    public Map<String, IndexEntry> indexTerms(int startIndex, int endIndex) {
 
         index = new HashMap<String, IndexEntry>(endIndex - startIndex);
 
@@ -86,8 +88,8 @@ public class TermIndexBuilder {
         return index;
     }
 
-    public static HashMap<String, IndexEntry> findUniqueTerms(HashMap<String, IndexEntry> terms) {
-        HashMap<String, IndexEntry> uniqueTerms = new HashMap<String, IndexEntry>();
+    public static Map<String, IndexEntry> findUniqueTerms(Map<String, IndexEntry> terms) {
+        Map<String, IndexEntry> uniqueTerms = new HashMap<String, IndexEntry>();
 
         Collection<IndexEntry> col = terms.values();
         Iterator<IndexEntry> iter = col.iterator();
@@ -96,7 +98,7 @@ public class TermIndexBuilder {
             IndexEntry ent = iter.next();
 
             // enforce the term to be unique
-            // in order to avoid stop words put a size contraint on the length of words to be selected
+            // in order to avoid stop words put a size constraint on the length of words to be selected
             if (ent.getFrequency() == 1 && ent.getTerm().length() > 3) {
                 uniqueTerms.put(ent.getTerm(), ent);
             }
@@ -108,8 +110,8 @@ public class TermIndexBuilder {
         return uniqueTerms;
     }
 
-    public static ArrayList<IndexEntry> countStopWords(HashMap<String, IndexEntry> terms, String[] stopwords) {
-        ArrayList<IndexEntry> stopTerms = new ArrayList<IndexEntry>(stopwords.length);
+    public static List<IndexEntry> countStopWords(Map<String, IndexEntry> terms, String[] stopwords) {
+        List<IndexEntry> stopTerms = new ArrayList<IndexEntry>(stopwords.length);
 
         for (int i = 0; i < stopwords.length; i++) {
             String curWord = stopwords[i];
@@ -123,7 +125,7 @@ public class TermIndexBuilder {
         return stopTerms;
     }
 
-    public static int[] countTermsBasedOnRank(HashMap<String, IndexEntry> ind, int MAX_RANK) {
+    public static int[] countTermsBasedOnRank(Map<String, IndexEntry> ind, int MAX_RANK) {
         int result[] = new int[MAX_RANK + 1];
 
         Collection<IndexEntry> col = ind.values();
@@ -136,7 +138,7 @@ public class TermIndexBuilder {
         return result;
     }
 
-    public static int[][] countTermsBasedOnRank(HashMap<String, IndexEntry> ind, HashMap<String, IndexEntry> ind2,
+    public static int[][] countTermsBasedOnRank(Map<String, IndexEntry> ind, Map<String, IndexEntry> ind2,
             int MAX_RANK) {
         int result[][] = new int[MAX_RANK + 1][3];
 
@@ -171,7 +173,7 @@ public class TermIndexBuilder {
         return result;
     }
 
-    public static void outputVocabulary(HashMap<String, IndexEntry> ind, String filename) {
+    public static void outputVocabulary(Map<String, IndexEntry> ind, String filename) {
         if (ind == null) {
             System.out.println("TermIndexBuilder.outputVocabulary(): input hashmap can not be null. Skipping");
             return;
@@ -213,7 +215,7 @@ public class TermIndexBuilder {
         return tokens.length;
     }
 
-    public HashMap<String, IndexEntry> getIndex() {
+    public Map<String, IndexEntry> getIndex() {
         return index;
     }
 
@@ -223,7 +225,7 @@ public class TermIndexBuilder {
             String text = TextPreprocessor.readFile(inputFile);
             text = tp.processText(text).toLowerCase();
             String[] tokens = text.split("\\s+");
-            HashMap<String, IndexEntry> index = new HashMap<String, IndexEntry>();
+            Map<String, IndexEntry> index = new HashMap<String, IndexEntry>();
             // find rare words
             for (int j = 0; j < tokens.length; j++) {
                 String s = tokens[j];
@@ -252,13 +254,13 @@ public class TermIndexBuilder {
 
     }
 
-    public static ArrayList<IndexEntry> getRareWords(TextPreprocessor tp, String inputFile, int max_frequency) {
+    public static List<IndexEntry> getRareWords(TextPreprocessor tp, String inputFile, int max_frequency) {
         long ss = System.nanoTime();
-        ArrayList<IndexEntry> results = new ArrayList<IndexEntry>();
+        List<IndexEntry> results = new ArrayList<IndexEntry>();
         String text = TextPreprocessor.readFile(inputFile);
         text = tp.processText(text).toLowerCase();
         String[] tokens = text.split("\\s+");
-        HashMap<String, IndexEntry> index = new HashMap<String, IndexEntry>();
+        Map<String, IndexEntry> index = new HashMap<String, IndexEntry>();
         // find rare words
         for (int j = 0; j < tokens.length; j++) {
             String s = tokens[j];

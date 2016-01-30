@@ -41,3 +41,4 @@ class TermPosComparator implements Comparator<IndexEntry> {
         }
     }
 }
+
